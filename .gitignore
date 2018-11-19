@@ -1,5 +1,3 @@
-# Created by .ignore support plugin (hsz.mobi)
-### Go template
 # Binaries for programs and plugins
 *.exe
 *.exe~
@@ -19,4 +17,3 @@ tools
 
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
-
