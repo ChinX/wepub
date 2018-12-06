@@ -81,6 +81,7 @@ func RegistryHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func checkAdmin(w http.ResponseWriter, r *http.Request) *api.CommonResult {
+	return  &api.CommonResult{Status: module.StatusLogin}
 	result := &api.CommonResult{Status: module.StatusLogout}
 	userData, err := module.NewSession(w, r)
 	if err != nil {

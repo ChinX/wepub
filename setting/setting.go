@@ -6,6 +6,12 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/chinx/wepub/crypts"
+	_ "github.com/chinx/morph/bmp"
+	_ "github.com/chinx/morph/gif"
+	_ "github.com/chinx/morph/jpeg"
+	_ "github.com/chinx/morph/png"
+	_ "github.com/chinx/morph/tiff"
+	_ "github.com/chinx/morph/webp"
 )
 
 type Options struct {

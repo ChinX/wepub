@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"fmt"
 	"html/template"
 	"io"
@@ -10,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"strings"
 	"time"
 
 	"github.com/chinx/wepub/api"
@@ -27,7 +29,7 @@ func CreatePage(w http.ResponseWriter, r *http.Request) {
 		reply(w, http.StatusInternalServerError, err, nil)
 		return
 	}
-	file, err := os.Create(StaticDir+"/" + pageURL)
+	file, err := os.Create(StaticDir + "/" + pageURL)
 	if err != nil {
 		reply(w, http.StatusInternalServerError, err, nil)
 		return
@@ -137,8 +139,15 @@ func catchImage(w http.ResponseWriter, r *http.Request) {
 	reply(w, http.StatusOK, result, nil)
 }
 
+type urlChan struct {
+	index int
+	filename string
+}
+
 func downSave(list []*api.ImageData) ([]*api.ImageData, error) {
 	var nErr error
+
+	c := make(chan*urlChan)
 	for i := range list {
 		_, err := url.Parse(list[i].Source)
 		if err != nil {
@@ -146,6 +155,8 @@ func downSave(list []*api.ImageData) ([]*api.ImageData, error) {
 			nErr = err
 			continue
 		}
+
+		go downSaveOne(list[i].Source, i, c)
 
 		resp, err := http.Get(list[i].Source)
 		if err != nil || resp.StatusCode >= http.StatusBadRequest {
@@ -155,14 +166,45 @@ func downSave(list []*api.ImageData) ([]*api.ImageData, error) {
 		}
 		defer resp.Body.Close()
 
-		filename, err := module.SaveScale(resp.Body, StaticDir + "/upload/", 640, 0)
+		filename, err := module.SaveScale(resp.Body, StaticDir+"/upload/", 640)
 		if err != nil {
 			list[i].State = "FAILURE"
 			nErr = err
 			continue
 		}
-		list[i].URL = "/editor/upload/" + filename
+		list[i].URL = strings.Replace(filename, StaticDir, "/editor", 1)
+	}
+	for j := 0 ; j < len(list); j ++ {
+		select {
+		case data := <- c:
+			if data.filename == ""{
+				list[data.index].State = "FAILURE"
+			}else{
+				list[data.index].URL = data.filename
+			}
+		case <- time.After(time.Second * 30):
+			return list, errors.New("timeout")
+		}
 	}
 	log.Println(nErr)
 	return list, nErr
+}
+
+func downSaveOne(source string, index int, c chan*urlChan)  {
+	resp, err := http.Get(source)
+	if err != nil || resp.StatusCode >= http.StatusBadRequest {
+		log.Println(err)
+		c <- &urlChan{index:index}
+		return
+	}
+	defer resp.Body.Close()
+
+	filename, err := module.SaveScale(resp.Body, StaticDir+"/upload/", 640)
+	if err != nil {
+		log.Println(err)
+		c <- &urlChan{index:index}
+		return
+	}
+
+	c <- &urlChan{index:index, filename: strings.Replace(filename, StaticDir, "/editor", 1)}
 }
