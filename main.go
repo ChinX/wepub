@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/chinx/wepub/handler"
 	"log"
 	"net/http"
 	"runtime"
@@ -19,12 +20,10 @@ func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	opt, err := setting.LoadConfigFile("./cert/coupon_private.key", "./conf/windup.toml")
-	//opt, err := setting.LoadConfigFile("./cert/coupon_private.key", "./conf/windup.conf")
 	if err != nil {
 		log.Fatal(err)
 	}
-	opt.Mysql.Password="vessel"
-	opt.HttpPort = 9099
+
 	err = model.InitORM("mysql",
 		fmt.Sprintf("%s:%s@(%s:%d)/%s?charset=utf8",
 			opt.Mysql.User, opt.Mysql.Password,
@@ -35,7 +34,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	//handler.StaticDir = opt.StaticDir
+	handler.StaticDir = opt.StaticDir
 	session.InitManager(
 		session.SetStore(redis.NewRedisStore(&redis.Options{
 			Addr:     fmt.Sprintf("%s:%d", opt.Redis.Server, opt.Redis.Port),
